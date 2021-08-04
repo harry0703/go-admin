@@ -397,6 +397,11 @@ type Config struct {
 
 	prefix string       `json:"-" yaml:"-" ini:"-"`
 	lock   sync.RWMutex `json:"-" yaml:"-" ini:"-"`
+
+	RedisHost     string `json:"-" yaml:"redis_host"`
+	RedisPort     int    `json:"-" yaml:"redis_port"`
+	RedisPassword string `json:"-" yaml:"redis_password"`
+	RedisDB       int    `json:"-" yaml:"redis_db"`
 }
 
 type Logger struct {

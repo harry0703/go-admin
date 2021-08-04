@@ -5,19 +5,22 @@
 package auth
 
 import (
+	ctx "context"
 	"fmt"
+	"github.com/GoAdminGroup/go-admin/modules/config"
 	"sync"
-
-	"github.com/GoAdminGroup/go-admin/modules/db/dialect"
-	"github.com/GoAdminGroup/go-admin/modules/logger"
+	"time"
 
 	"github.com/GoAdminGroup/go-admin/context"
 	"github.com/GoAdminGroup/go-admin/modules/db"
 	"github.com/GoAdminGroup/go-admin/modules/service"
 	"github.com/GoAdminGroup/go-admin/plugins/admin/models"
 	"github.com/GoAdminGroup/go-admin/plugins/admin/modules"
+	"github.com/go-redis/redis/v8"
 	"golang.org/x/crypto/bcrypt"
 )
+
+var xctx = ctx.Background()
 
 // Auth get the user model from Context.
 func Auth(ctx *context.Context) models.UserModel {
@@ -83,26 +86,21 @@ type TokenService struct {
 	tokens CSRFToken
 	lock   sync.Mutex
 	conn   db.Connection
+	redis  *redis.Client
 }
 
 func (s *TokenService) Name() string {
 	return TokenServiceKey
 }
 
-func InitCSRFTokenSrv(conn db.Connection) (string, service.Service) {
-	list, err := db.WithDriver(conn).Table("goadmin_session").
-		Where("values", "=", "__csrf_token__").
-		All()
-	if db.CheckError(err, db.QUERY) {
-		logger.Error("csrf token query from database error: ", err)
-	}
-	tokens := make(CSRFToken, len(list))
-	for i := 0; i < len(list); i++ {
-		tokens[i] = list[i]["sid"].(string)
-	}
+func InitCSRFTokenSrv(conf *config.Config) (string, service.Service) {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", conf.RedisHost, conf.RedisPort),
+		Password: conf.RedisPassword, // no password set
+		DB:       conf.RedisDB,       // use default DB
+	})
 	return TokenServiceKey, &TokenService{
-		tokens: tokens,
-		conn:   conn,
+		redis: rdb,
 	}
 }
 
@@ -123,36 +121,25 @@ func (s *TokenService) AddToken() string {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	tokenStr := modules.Uuid()
-	s.tokens = append(s.tokens, tokenStr)
-	_, err := db.WithDriver(s.conn).Table("goadmin_session").Insert(dialect.H{
-		"sid":    tokenStr,
-		"values": "__csrf_token__",
-	})
-	if db.CheckError(err, db.INSERT) {
-		logger.Error("csrf token insert into database error: ", err)
-	}
+	s.redis.HSet(xctx, "goadmin-sessions", tokenStr, time.Now())
 	return tokenStr
 }
 
 // CheckToken check the given token with tokens in the CSRFToken, if exist
 // return true.
 func (s *TokenService) CheckToken(toCheckToken string) bool {
-	//for i := 0; i < len(s.tokens); i++ {
-	//	if (s.tokens)[i] == toCheckToken {
-	//		s.tokens = append((s.tokens)[:i], (s.tokens)[i+1:]...)
-	//		err := db.WithDriver(s.conn).Table("goadmin_session").
-	//			Where("sid", "=", toCheckToken).
-	//			Where("values", "=", "__csrf_token__").
-	//			Delete()
-	//		if db.CheckError(err, db.DELETE) {
-	//			logger.Error("csrf token delete from database error: ", err)
-	//		}
-	//		return true
-	//	}
-	//}
-	//return false
-	fmt.Println("goAdmin check token: " + toCheckToken)
-	return true
+	//fmt.Println("goAdmin check token: " + toCheckToken)
+
+	result, err := s.redis.HGet(xctx, "goadmin-sessions", toCheckToken).Result()
+	s.redis.HDel(xctx, "goadmin-sessions", toCheckToken)
+
+	if err != nil {
+		return false
+	}
+	if result != "" {
+		return true
+	}
+	return false
 }
 
 // CSRFToken is type of a csrf token list.

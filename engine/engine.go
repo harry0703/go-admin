@@ -69,7 +69,7 @@ func (eng *Engine) Use(router interface{}) error {
 		emptyAdapterPanic()
 	}
 
-	eng.Services.Add(auth.InitCSRFTokenSrv(eng.DefaultConnection()))
+	eng.Services.Add(auth.InitCSRFTokenSrv(eng.config))
 	eng.initSiteSetting()
 	eng.initJumpNavButtons()
 	eng.initPlugins()

@@ -14,6 +14,7 @@ require (
 	github.com/gavv/httpexpect v2.0.0+incompatible
 	github.com/gin-gonic/gin v1.7.2
 	github.com/go-chi/chi v1.5.4
+	github.com/go-redis/redis/v8 v8.10.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gobuffalo/buffalo v0.16.23
 	github.com/gofiber/fiber/v2 v2.12.0
@@ -47,6 +48,6 @@ require (
 	golang.org/x/text v0.3.6
 	google.golang.org/appengine v1.6.5 // indirect
 	gopkg.in/ini.v1 v1.51.1
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.3.0
 	xorm.io/xorm v1.0.2
 )
