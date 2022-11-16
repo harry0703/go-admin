@@ -196,6 +196,7 @@ func (driver *DBDriver) Update(sid string, values map[string]interface{}) error 
 			if db.CheckError(err, db.DELETE) {
 				return err
 			}
+			return nil
 		}
 		valuesByte, err := json.Marshal(values)
 		if err != nil {

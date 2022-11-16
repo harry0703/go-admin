@@ -149,6 +149,28 @@ func (s *TokenService) CheckToken(toCheckToken string) bool {
 			return true
 		}
 	}
+
+	{
+		//todo 如果s.tokens中没有该csrf token，则从数据库查询，以支持分布式环境 @harry 2022-11-16
+		logger.Info("# => auth check csrf token, doesn't exist', query from db")
+		c, err := db.WithDriver(s.conn).Table("goadmin_session").
+			Where("sid", "=", toCheckToken).
+			Where("values", "=", "__csrf_token__").Count()
+		if err == nil {
+			logger.Info("# => auth check csrf token, doesn't exist', query from db: ", c)
+			if c > 0 {
+				err := db.WithDriver(s.conn).Table("goadmin_session").
+					Where("sid", "=", toCheckToken).
+					Where("values", "=", "__csrf_token__").
+					Delete()
+				if db.CheckError(err, db.DELETE) {
+					logger.Error("csrf token delete from database error: ", err)
+				}
+				return true
+			}
+		}
+	}
+
 	return false
 }
 

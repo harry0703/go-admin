@@ -787,8 +787,8 @@ func (c *Config) Update(m map[string]string) error {
 					c.Logger.Encoder.Duration = m["logger_encoder_duration"]
 					c.Logger.Encoder.Caller = m["logger_encoder_caller"]
 				}
-
-				initLogger(c)
+				//todo 这个会将logger的设置重置，因此注释掉 @hary 2022-11-16
+				//initLogger(c)
 			case "config.FileUploadEngine":
 				c.FileUploadEngine = GetFileUploadEngineFromJSON(m["file_upload_engine"])
 			}
